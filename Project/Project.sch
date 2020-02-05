@@ -354,13 +354,9 @@ NoConn ~ 9100 1700
 NoConn ~ 9100 1600
 NoConn ~ 9100 1500
 NoConn ~ 3350 2950
-NoConn ~ 3350 3050
-NoConn ~ 3350 3150
 NoConn ~ 3350 3250
 NoConn ~ 3350 3350
 NoConn ~ 3350 3450
-NoConn ~ 3350 3550
-NoConn ~ 3350 3650
 NoConn ~ 3350 3750
 NoConn ~ 3350 3850
 NoConn ~ 3350 4450
@@ -973,4 +969,55 @@ Wire Wire Line
 Connection ~ 7600 3850
 Wire Wire Line
 	7600 3850 7750 3850
+Text Label 2950 3050 2    50   ~ 0
+1pps(1_pulse_per_second)
+Text Label 3150 3150 2    50   ~ 0
+3DF(3D-FiX_indicator)
+Wire Wire Line
+	2950 3050 3350 3050
+Wire Wire Line
+	3150 3150 3350 3150
+Text Label 8850 4250 0    50   ~ 0
+temperature
+Wire Wire Line
+	8850 4250 8250 4250
+Wire Wire Line
+	8250 4250 8250 4300
+Text Label 2850 3250 2    50   ~ 0
+temperature
+Wire Wire Line
+	2850 3250 3350 3250
+$Comp
+L Switch:SW_Push_Dual SW?
+U 1 1 5E40AB71
+P 7300 2850
+F 0 "SW?" H 7300 3135 50  0000 C CNN
+F 1 "SW_Push_Dual" H 7300 3044 50  0000 C CNN
+F 2 "" H 7300 3050 50  0001 C CNN
+F 3 "~" H 7300 3050 50  0001 C CNN
+	1    7300 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L Switch:SW_Push_Dual SW?
+U 1 1 5E40D579
+P 6750 2850
+F 0 "SW?" H 6750 3135 50  0000 C CNN
+F 1 "SW_Push_Dual" H 6750 3044 50  0000 C CNN
+F 2 "" H 6750 3050 50  0001 C CNN
+F 3 "~" H 6750 3050 50  0001 C CNN
+	1    6750 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:LED D?
+U 1 1 5E40DD7F
+P 6700 2350
+F 0 "D?" H 6693 2566 50  0000 C CNN
+F 1 "LED" H 6693 2475 50  0000 C CNN
+F 2 "" H 6700 2350 50  0001 C CNN
+F 3 "~" H 6700 2350 50  0001 C CNN
+	1    6700 2350
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
