@@ -199,8 +199,6 @@ NoConn ~ 5150 3650
 NoConn ~ 5150 3750
 NoConn ~ 5150 3850
 NoConn ~ 3350 2950
-NoConn ~ 3350 3250
-NoConn ~ 3350 3350
 NoConn ~ 3350 3450
 NoConn ~ 3350 3750
 NoConn ~ 3350 3850
@@ -871,7 +869,7 @@ Wire Wire Line
 Text Label 1550 2750 1    50   ~ 0
 enable
 Wire Wire Line
-	1550 2750 1550 2500
+	1550 2750 1550 2600
 Text Label 1450 2800 1    50   ~ 0
 VbAt
 Wire Wire Line
@@ -1299,4 +1297,36 @@ Wire Wire Line
 	8950 2900 8850 2900
 Wire Wire Line
 	9250 2900 9650 2900
+Text Label 2950 3050 2    50   ~ 0
+1pps(1_pulse_per_second)
+Wire Wire Line
+	1550 2600 1600 2600
+Connection ~ 1550 2600
+Wire Wire Line
+	1550 2600 1550 2500
+Wire Wire Line
+	1600 3350 1900 3350
+Wire Wire Line
+	1900 3350 1900 3200
+Wire Wire Line
+	1900 2700 1650 2700
+Connection ~ 1650 2700
+Wire Wire Line
+	1900 3350 3350 3350
+Connection ~ 1900 3350
+$Comp
+L Device:R R?
+U 1 1 5E71A4A3
+P 1900 3050
+F 0 "R?" V 1693 3050 50  0000 C CNN
+F 1 "10k" V 1784 3050 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder" V 1830 3050 50  0001 C CNN
+F 3 "~" H 1900 3050 50  0001 C CNN
+	1    1900 3050
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	1900 2900 1900 2700
+Wire Wire Line
+	1600 2600 1600 3350
 $EndSCHEMATC
