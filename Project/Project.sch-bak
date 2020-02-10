@@ -515,8 +515,6 @@ F 3 "" H 9150 1950 50  0001 C CNN
 	1    9150 1950
 	1    0    0    -1  
 $EndComp
-Text Label 9650 1500 0    50   ~ 0
-output_to_battery
 $Comp
 L Device:C C17
 U 1 1 5E43DB6D
