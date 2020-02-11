@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source /home/anton/Projects/E7020E/E7020E_Project/Project/Project.sch)
-    (date "tis 11 feb 2020 09:14:23")
+    (date "tis 11 feb 2020 14:22:47")
     (tool "Eeschema 5.1.5-52549c5~84~ubuntu18.04.1")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -226,7 +226,7 @@
       (tstamp 5E45543A))
     (comp (ref J3)
       (value Conn_01x09_Male)
-      (footprint Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Horizontal)
+      (footprint Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical)
       (datasheet ~)
       (libsource (lib Connector) (part Conn_01x09_Male) (description "Generic connector, single row, 01x09, script generated (kicad-library-utils/schlib/autogen/connector/)"))
       (sheetpath (names /) (tstamps /))

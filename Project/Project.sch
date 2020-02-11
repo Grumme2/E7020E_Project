@@ -832,7 +832,7 @@ U 1 1 5E4B23A1
 P 1250 2300
 F 0 "J3" V 1085 2278 50  0000 C CNN
 F 1 "Conn_01x09_Male" V 1176 2278 50  0000 C CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Horizontal" H 1250 2300 50  0001 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical" H 1250 2300 50  0001 C CNN
 F 3 "~" H 1250 2300 50  0001 C CNN
 	1    1250 2300
 	0    1    1    0   
