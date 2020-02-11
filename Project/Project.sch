@@ -543,12 +543,10 @@ $EndComp
 Text Label 3150 3150 2    50   ~ 0
 3DF(3D-FiX_indicator)
 Wire Wire Line
-	2950 3050 3350 3050
-Wire Wire Line
 	3150 3150 3350 3150
 Text Label 4900 6800 0    50   ~ 0
 temperature
-Text Label 2850 3250 2    50   ~ 0
+Text Label 3350 3350 2    50   ~ 0
 temperature
 Wire Wire Line
 	2850 3250 3350 3250
@@ -767,7 +765,7 @@ U 1 1 5E286E45
 P 4250 3850
 F 0 "U1" H 4250 2261 50  0000 C CNN
 F 1 "CMWX1ZZABZ-078" H 4250 2170 50  0000 C CNN
-F 2 "RF_Module:CMWX1ZZABZ" H 4250 3850 50  0001 C CNN
+F 2 "lab1_CMWX1ZZABZ-078:CMWX1ZZABZ_longer_pads" H 4250 3850 50  0001 C CNN
 F 3 "https://wireless.murata.com/RFM/data/type_abz.pdf" H 6700 2350 50  0001 C CNN
 	1    4250 3850
 	1    0    0    -1  
@@ -860,7 +858,7 @@ Wire Wire Line
 	1450 2500 1450 2800
 Wire Wire Line
 	1350 2500 1350 2750
-Text Label 2750 3650 0    50   ~ 0
+Text Label 2850 3250 0    50   ~ 0
 TX
 Text Label 2700 3450 0    50   ~ 0
 RX
@@ -1270,7 +1268,7 @@ Wire Wire Line
 	8950 2900 8850 2900
 Wire Wire Line
 	9250 2900 9650 2900
-Text Label 2950 3050 2    50   ~ 0
+Text Label 2750 3650 2    50   ~ 0
 1pps(1_pulse_per_second)
 $Comp
 L Device:R R1
@@ -1285,8 +1283,6 @@ F 3 "~" H 1550 3050 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	1550 3350 1550 3200
-Wire Wire Line
-	1550 3350 3350 3350
 Wire Wire Line
 	1550 2500 1550 2900
 NoConn ~ 1450 2800
@@ -1327,4 +1323,10 @@ Wire Wire Line
 	4250 5650 4250 5350
 Wire Wire Line
 	10200 2200 10400 2200
+Wire Wire Line
+	1550 3350 2050 3350
+Wire Wire Line
+	2050 3350 2050 3050
+Wire Wire Line
+	2050 3050 3350 3050
 $EndSCHEMATC
