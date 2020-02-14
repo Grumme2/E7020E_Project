@@ -769,25 +769,8 @@ F 3 "~" H 1250 2300 50  0001 C CNN
 	1    1250 2300
 	0    1    1    0   
 $EndComp
-$Comp
-L power:+3.3V #PWR0110
-U 1 1 5E50E564
-P 1650 2700
-F 0 "#PWR0110" H 1650 2550 50  0001 C CNN
-F 1 "+3.3V" H 1665 2873 50  0000 C CNN
-F 2 "" H 1650 2700 50  0001 C CNN
-F 3 "" H 1650 2700 50  0001 C CNN
-	1    1650 2700
-	-1   0    0    1   
-$EndComp
-Wire Wire Line
-	1650 2500 1650 2700
 Text Label 1550 2750 1    50   ~ 0
 enable
-Text Label 1450 2800 1    50   ~ 0
-VbAt
-Wire Wire Line
-	1450 2500 1450 2800
 Wire Wire Line
 	1350 2500 1350 2750
 Text Label 2850 3250 0    50   ~ 0
@@ -1151,7 +1134,6 @@ Wire Wire Line
 	1550 3350 1550 3200
 Wire Wire Line
 	1550 2500 1550 2900
-NoConn ~ 1450 2800
 NoConn ~ 1450 2500
 Wire Wire Line
 	9700 1850 9700 1900
@@ -1296,4 +1278,5 @@ F 3 "~" H 7100 1500 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	7400 4250 7400 3400
+NoConn ~ 1650 2500
 $EndSCHEMATC
