@@ -1,0 +1,33 @@
+[package]
+name = "comm-module"
+version = "0.1.0"
+authors = ["Nils Fitinghoff <nils.fitinghoff@grepit.se>"]
+edition = "2018"
+
+[dependencies]
+cortex-m-rtfm = "0.4.3"
+cortex-m = "0.5.10"
+embedded-hal = "0.2.3"
+panic-semihosting = "0.5.3"
+cortex-m-rt = "0.6.10"
+cortex-m-semihosting = "0.3.5"
+stm32l0xx-hal = { version = "0.5.0", features = ["stm32l0x2", "rt"] }
+nb = "0.1.2"
+cobs = { version = "0.1.4", default-features = false }
+crc16 = "0.4.0"
+heapless = "0.5.1"
+postcard = "0.4.2"
+# longfi-device = { git = "https://git.grepit.se/grepit/lora-rs.git" }
+# communicator = { git = "https://git.grepit.se/grepit/communicator.git" }
+# clang-sys = "0.29.1"
+# bindgen = "0.53.1"
+
+[profile.dev]
+# The UART RX seems to be too slow on `-O0`, so messages never get through.
+opt-level = 1
+
+[profile.release]
+debug = true
+
+#[patch.'https://git.grepit.se/grepit/lora-rs.git']
+#longfi-device = { git = "https://git.grepit.se/viktor.sonesten/lora-rs.git", branch = "ltu-es" }
