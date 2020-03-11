@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), no_std)]
+//#![cfg_attr(not(test), no_std)]
 #![no_main]
 #![no_std]
 #![allow(deprecated)]
@@ -22,7 +22,7 @@ use hal::{
 // use longfi_device::{ClientEvent, RfConfig, RfEvent};
 use stm32l0xx_hal as hal;
 // use communicator::{Message, Channel};
-//use heapless::consts::*;
+use heapless::consts::*;
 
 #[rtfm::app(device = stm32l0xx_hal::pac)]
 const APP: () = {
@@ -177,7 +177,7 @@ const APP: () = {
     #[task(capacity = 4, priority = 2, resources = [LED])]
     fn test_event(){
         let led: &mut gpiob::PB2<Output<PushPull>> = resources.LED;
-        led.set_high().unwrap();
+        ledOn(resources.LED);
     }
     // #[interrupt(priority = 1, resources = [SX1276_DIO0, INT], spawn = [radio_event])]
     // fn EXTI4_15() {
@@ -195,6 +195,10 @@ const APP: () = {
         fn USART4_USART5();
     }
 };
+
+fn ledOn(led: &mut gpiob::PB2<Output<PushPull>>) {
+    led.set_high().unwrap();
+}
 
 // Example application: increment counter:
 // fn application(

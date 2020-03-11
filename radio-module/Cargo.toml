@@ -31,3 +31,4 @@ debug = true
 
 #[patch.'https://git.grepit.se/grepit/lora-rs.git']
 #longfi-device = { git = "https://git.grepit.se/viktor.sonesten/lora-rs.git", branch = "ltu-es" }
+
