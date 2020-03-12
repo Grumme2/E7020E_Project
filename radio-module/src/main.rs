@@ -200,31 +200,49 @@ const APP: () = {
     // }
 
 
-    #[task(priority = 2, resources = [LED])]
-    fn position_button_event(cx: position_button_event::Context, turnon: bool, blink: bool, number: u32){
-        led(cx.resources.LED, turnon, blink, number);
+    #[task(priority = 2, resources = [&LED])]
+    fn position_button_event(cx: position_button_event::Context){
+        //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
+        ledOn(cx.resources.LED);
     }
-    // #[task(priority = 4, resources = [LED])]
-    // fn distance_button_event(){
-    //     ledOff(&mut resources.LED);
-    // }
+    #[task(priority = 4, resources = [&LED])]
+    fn distance_button_event(cx: distance_button_event::Context){
+        //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
+        ledOff(cx.resources.LED);
+    }
     // #[interrupt(priority = 1, resources = [SX1276_DIO0, INT], spawn = [radio_event])]
     // fn EXTI4_15() {
         // resources.INT.clear_irq(resources.SX1276_DIO0.pin_number());
         // spawn.radio_event(RfEvent::DIO0).unwrap();
         // }
-    #[task(binds = EXTI4_15, priority = 1, resources = [DistanceButton, INT], spawn = [position_button_event])]
+    #[task(binds = EXTI4_15, priority = 1, resources = [DistanceButton, PositionButton, INT], spawn = [distance_button_event, position_button_event])]
     fn EXTI4_15(c: EXTI4_15::Context) {
-        hprintln!("Hello!_test12").unwrap();
-        c.resources.INT.clear_irq(c.resources.DistanceButton.pin_number());
-        c.spawn.position_button_event(true,false,0).unwrap();
+        
+       // let mut distancebutton: gpiob::PB5<Input<PullUp>> = c.resources.DistanceButton;
+        let res = c.resources.DistanceButton.is_high();
+        match res {
+            core::result::Result::Ok(v) => {
+                if v==true {
+                    hprintln!("Hello!_testif").unwrap();
+                    c.resources.INT.clear_irq(c.resources.DistanceButton.pin_number());
+                    c.spawn.distance_button_event().unwrap();
+                } else {
+                    hprintln!("Hello!_testelse").unwrap();
+                    c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
+                    c.spawn.position_button_event().unwrap();
+                }
+            },
+            _ => {
+
+            }
+        }
     }
-    #[task(binds = EXTI2_3, priority = 1, resources = [PositionButton, INT], spawn = [position_button_event])]
-    fn pos(c: pos::Context) {
-        hprintln!("Hello!_test").unwrap();
-        c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
-        c.spawn.position_button_event(false,false,0).unwrap();
-    }
+    //#[task(binds = EXTI4_15, priority = 1, resources = [PositionButton, INT], spawn = [position_button_event])]
+    // fn pos(c: pos::Context) {
+        // hprintln!("Hello!_test").unwrap();
+        // c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
+        // c.spawn.position_button_event().unwrap();
+    // }
 // 
     // Interrupt handlers used to dispatch software tasks
     extern "C" {
