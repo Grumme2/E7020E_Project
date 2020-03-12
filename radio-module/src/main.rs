@@ -199,23 +199,28 @@ const APP: () = {
     //     }
     // }
 
+    #[task(priority = 2, resources = [LED])]
+    fn led_button_event(cx: led_button_event::Context, ledon: bool){
+        //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
+        led(cx.resources.LED, ledon);
+    }
 
-    #[task(priority = 2, resources = [&LED])]
-    fn position_button_event(cx: position_button_event::Context){
+    // #[task(priority = 2, resources = [&LED])]
+    // fn position_button_event(cx: position_button_event::Context){
         //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
-        ledOn(cx.resources.LED);
-    }
-    #[task(priority = 4, resources = [&LED])]
-    fn distance_button_event(cx: distance_button_event::Context){
-        //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
-        ledOff(cx.resources.LED);
-    }
+        // ledOn(cx.resources.LED);
+    // }
+    // #[task(priority = 4, resources = [&LED])]
+    // fn distance_button_event(cx: distance_button_event::Context){
+       // let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
+        // ledOff(cx.resources.LED);
+    // }
     // #[interrupt(priority = 1, resources = [SX1276_DIO0, INT], spawn = [radio_event])]
     // fn EXTI4_15() {
         // resources.INT.clear_irq(resources.SX1276_DIO0.pin_number());
         // spawn.radio_event(RfEvent::DIO0).unwrap();
         // }
-    #[task(binds = EXTI4_15, priority = 1, resources = [DistanceButton, PositionButton, INT], spawn = [distance_button_event, position_button_event])]
+    #[task(binds = EXTI4_15, priority = 1, resources = [DistanceButton, PositionButton, INT], spawn = [led_button_event])]
     fn EXTI4_15(c: EXTI4_15::Context) {
         
        // let mut distancebutton: gpiob::PB5<Input<PullUp>> = c.resources.DistanceButton;
@@ -225,11 +230,11 @@ const APP: () = {
                 if v==true {
                     hprintln!("Hello!_testif").unwrap();
                     c.resources.INT.clear_irq(c.resources.DistanceButton.pin_number());
-                    c.spawn.distance_button_event().unwrap();
+                    c.spawn.led_button_event(false).unwrap();
                 } else {
                     hprintln!("Hello!_testelse").unwrap();
                     c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
-                    c.spawn.position_button_event().unwrap();
+                    c.spawn.led_button_event(true).unwrap();
                 }
             },
             _ => {
@@ -259,20 +264,14 @@ fn ledOff(led: &mut gpiob::PB2<Output<PushPull>>) {
     led.set_low().ok();
 }
 
-fn led(led: &mut gpiob::PB2<Output<PushPull>>, turnon: bool, blink: bool, number: u32) {
-    if blink==true {
-        for i in 0..number {
-            led.set_high().ok();
-            //hal::delay::Delay.DelayMs(100);
-            led.set_low().ok();
-        }
+fn led(led: &mut gpiob::PB2<Output<PushPull>>, turnon: bool,) {
+   
+    if turnon==true {
+        led.set_high().ok();
     } else {
-        if turnon==true {
-            led.set_high().ok();
-        } else {
-            led.set_low().ok();
-        }
+        led.set_low().ok();
     }
+
 }
 // Example application: increment counter:
 // fn application(
