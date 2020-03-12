@@ -9,6 +9,7 @@ extern crate panic_semihosting;
 
 use hal::{
     exti::TriggerEdge,
+    exti::Interrupt,
     gpio::*,
     pac,
     prelude::*,
@@ -16,6 +17,7 @@ use hal::{
     spi,
     syscfg,
 };
+use cortex_m_semihosting::hprintln;
 // use longfi_bindings::AntennaSwitches;
 // use longfi_device;
 // use longfi_device::LongFi;
@@ -52,14 +54,14 @@ const APP: () = {
 
         // Configure PB4 as input.
        // let sx1276_dio0 = gpiob.pb4.into_pull_up_input();
-        let button = gpiob.pb5.into_pull_up_input();
+        let mut button = gpiob.pb5.into_pull_up_input();
         // Configure the external interrupt on the falling edge for the pin 2.
-        // exti.listen(
-            // &mut syscfg,
-            // sx1276_dio0.port(),
-            // sx1276_dio0.pin_number(),
-            // TriggerEdge::Rising,
-        // );
+         exti.listen(
+             &mut syscfg,
+             button.port(),
+             button.pin_number(),
+             TriggerEdge::Rising,
+         );
 
         let sck = gpiob.pb3;
         let miso = gpioa.pa6;
@@ -109,7 +111,7 @@ const APP: () = {
 
         // Configure PB5 as output.
         let mut led = gpiob.pb2.into_push_pull_output();
-        //led.set_high().ok();
+       // led.set_high().ok();
 
         // Return the initialised resources.
         init::LateResources {
@@ -175,19 +177,19 @@ const APP: () = {
 
 
     #[task(capacity = 4, priority = 2, resources = [LED])]
-    fn test_event(){
-        let led: &mut gpiob::PB2<Output<PushPull>> = resources.LED;
+    fn button_event(){
         ledOn(resources.LED);
     }
     // #[interrupt(priority = 1, resources = [SX1276_DIO0, INT], spawn = [radio_event])]
     // fn EXTI4_15() {
         // resources.INT.clear_irq(resources.SX1276_DIO0.pin_number());
         // spawn.radio_event(RfEvent::DIO0).unwrap();
-    // }
-    #[interrupt(priority = 1, resources = [Button, INT], spawn = [test_event])]
+        // }
+    #[interrupt(binds = EXTI4_15, priority = 1, resources = [Button, INT], spawn = [button_event])]
     fn EXTI4_15() {
+        hprintln!("Hello!").unwrap();
         resources.INT.clear_irq(resources.Button.pin_number());
-        spawn.test_event().unwrap();
+        spawn.button_event().unwrap();
     }
 // 
     // Interrupt handlers used to dispatch software tasks
@@ -197,7 +199,7 @@ const APP: () = {
 };
 
 fn ledOn(led: &mut gpiob::PB2<Output<PushPull>>) {
-    led.set_high().unwrap();
+    led.set_high().ok();
 }
 
 // Example application: increment counter:
