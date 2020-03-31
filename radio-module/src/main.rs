@@ -20,6 +20,7 @@ use hal::{
     stm32::usart1,
     stm32::{USART1},
     delay::Delay,
+    time::U32Ext,
 };
 use cortex_m_semihosting::hprintln;
 use cortex_m::peripheral::DWT;
@@ -81,14 +82,14 @@ const APP: () = {
         let mut distancebutton = gpiob.pb5.into_pull_up_input();
         let mut positionbutton = gpiob.pb6.into_pull_up_input();
 
-        let mut tx = gpioa.pa9.into_pull_up_input();
-        let mut rx = gpioa.pa10.into_push_pull_output();
+        let mut rx = gpioa.pa10.into_pull_up_input();
+        let mut tx = gpioa.pa9.into_push_pull_output();
         // Configure the external interrupt on the falling edge for the pin 2.
 
         let serial = Serial::usart1(
             cx.device.USART1,
             (tx, rx),
-        serialConfig::default().baudrate(115_200.bps()),
+        serialConfig::default(), //.baudrate(115_200.bps())     Is now 9600 (default, 8 bit data 1 stop)
             &mut rcc,   
         ).unwrap();
 
