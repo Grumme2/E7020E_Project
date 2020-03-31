@@ -16,10 +16,14 @@ use hal::{
     rcc::Config,
     spi,
     syscfg,
+    serial::{Config as serialConfig, Rx, Serial, Tx},
+    stm32::usart1,
+    stm32::{USART1},
     delay::Delay,
 };
 use cortex_m_semihosting::hprintln;
 use cortex_m::peripheral::DWT;
+use nb::block;
 // use rtfm::{Exclusive, Mutex, app};
 //use rtfm::cyccnt::{Instant, U32Ext as _};
 // use longfi_bindings::AntennaSwitches;
@@ -48,18 +52,26 @@ const APP: () = {
         COUNTER_1: u32,
         #[init(0)]
         COUNTER_2: u32,
+        TX: Tx<USART1>,
+        RX: Rx<USART1>,
+     //   ITM: ITM,
+        //USART1: *const usart1::RegisterBlock,
     }
     #[init]
     fn init(cx: init::Context) -> init::LateResources {
         // Configure the clock.
         let mut rcc = cx.device.RCC.freeze(Config::hsi16());
         let mut syscfg = syscfg::SYSCFG::new(cx.device.SYSCFG, &mut rcc);
-
+        //let clocks = cx.device.RCC.Clocks;
+       // let clocks = rcc2.cfgr.freeze();
+       // let clocks = rcc.cfgr.freeze();
         // Acquire the GPIOB peripheral. This also enables the clock for GPIOB in
         // the RCC register.
         let gpioa = cx.device.GPIOA.split(&mut rcc);
         let gpiob = cx.device.GPIOB.split(&mut rcc);
         let gpioc = cx.device.GPIOC.split(&mut rcc);
+
+        
 
         let exti = cx.device.EXTI;
         //let exti2 = device.EXTI;
@@ -68,7 +80,20 @@ const APP: () = {
        // let sx1276_dio0 = gpiob.pb4.into_pull_up_input();
         let mut distancebutton = gpiob.pb5.into_pull_up_input();
         let mut positionbutton = gpiob.pb6.into_pull_up_input();
+
+        let mut tx = gpioa.pa9.into_pull_up_input();
+        let mut rx = gpioa.pa10.into_push_pull_output();
         // Configure the external interrupt on the falling edge for the pin 2.
+
+        let serial = Serial::usart1(
+            cx.device.USART1,
+            (tx, rx),
+        serialConfig::default().baudrate(115_200.bps()),
+            &mut rcc,   
+        ).unwrap();
+
+        let (tx, rx) = serial.split();
+
         exti.listen(
             &mut syscfg,
             distancebutton.port(),
@@ -137,6 +162,7 @@ const APP: () = {
         let mut led = gpiob.pb2.into_push_pull_output();
        // led.set_high().ok();
 
+       //let usart1 = serial::USART1::ptr();
         // Return the initialised resources.
         init::LateResources {
             INT: exti,
@@ -144,111 +170,72 @@ const APP: () = {
             PositionButton: positionbutton,
             DistanceButton: distancebutton,
             LED: led,
+            TX: tx,
+            RX: rx,
         }
     }
 
-    // #[task(capacity = 4, priority = 2, resources = [BUFFER, LED, STATE, COUNTER_1, COUNTER_2])]
-    // fn radio_event(event: RfEvent) {
-    //     // let longfi_radio = resources.LONGFI;
-    //     // let client_event = longfi_radio.handle_event(event);
-    //     match client_event {
-    //         // ClientEvent::ClientEvent_TxDone => {
-    //             // longfi_radio.receive();
-    //         // }
-    //          ClientEvent::ClientEvent_Rx => {
-    //             // let rx_packet = longfi_radio.get_rx();
-
-                
-    //                 // let buf = unsafe {
-    //                     // core::slice::from_raw_parts(rx_packet.buf, rx_packet.len as usize)
-    //                 // };
-    //                 //let message = Message::deserialize(buf);
-
-    //                 // if let Some(message) = message {
-    //                 //     // Let's assume we only have permission to use ID 2:
-    //                 //     if message.id != 2 {
-    //                 //         longfi_radio.set_buffer(resources.BUFFER);
-    //                 //         longfi_radio.receive();
-    //                 //         return;
-    //                 //     }
-
-    //                     let binary = application(
-    //                         // message,
-    //                         // resources.COUNTER_1,
-    //                         // resources.COUNTER_2,
-    //                         // resources.STATE,
-    //                         resources.LED
-    //                     );
-    //                     // longfi_radio.send(&binary);
-    //                 // }
-                
-
-    //             // longfi_radio.set_buffer(resources.BUFFER);
-    //             // longfi_radio.receive();
-    //         }
-    //         ClientEvent::ClientEvent_None => {
-                
-    //             let binary = application(
-    //                         // message,
-    //                         // resources.COUNTER_1,
-    //                         // resources.COUNTER_2,
-    //                         // resources.STATE,
-    //                 resources.LED
-    //             );
-    //         }
-    //     }
-    // }
-
-    #[task(priority = 2, resources = [LED])]
-    fn led_button_event(cx: led_button_event::Context, ledon: bool){
-        //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
-        led(cx.resources.LED, ledon);
-    }
-
-    // #[task(priority = 2, resources = [&LED])]
-    // fn position_button_event(cx: position_button_event::Context){
-        //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
-        // ledOn(cx.resources.LED);
-    // }
-    // #[task(priority = 4, resources = [&LED])]
-    // fn distance_button_event(cx: distance_button_event::Context){
-       // let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
-        // ledOff(cx.resources.LED);
-    // }
-    // #[interrupt(priority = 1, resources = [SX1276_DIO0, INT], spawn = [radio_event])]
-    // fn EXTI4_15() {
-        // resources.INT.clear_irq(resources.SX1276_DIO0.pin_number());
-        // spawn.radio_event(RfEvent::DIO0).unwrap();
-        // }
-    #[task(binds = EXTI4_15, priority = 1, resources = [DistanceButton, PositionButton, INT], spawn = [led_button_event])]
-    fn EXTI4_15(c: EXTI4_15::Context) {
-        
-       // let mut distancebutton: gpiob::PB5<Input<PullUp>> = c.resources.DistanceButton;
-        let res = c.resources.DistanceButton.is_high();
-        match res {
-            core::result::Result::Ok(v) => {
-                if v==true {
-                    hprintln!("Hello!_testif").unwrap();
-                    c.resources.INT.clear_irq(c.resources.DistanceButton.pin_number());
-                    c.spawn.led_button_event(false).unwrap();
-                } else {
-                    hprintln!("Hello!_testelse").unwrap();
-                    c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
-                    c.spawn.led_button_event(true).unwrap();
+     #[idle(resources = [RX, TX])]
+    fn idle(cx: idle::Context) -> ! {
+        let rx = cx.resources.RX;
+        let tx = cx.resources.TX;
+        loop {
+            hprintln!("test");
+            match block!(rx.read()) {
+                Ok(byte) => {
+                    hprintln!("Ok {:?}", byte);
+                    tx.write(byte).unwrap();
                 }
-            },
-            _ => {
-
+                Err(err) => {
+                    hprintln!("Error {:?}", err);
+                }
             }
         }
     }
-    //#[task(binds = EXTI4_15, priority = 1, resources = [PositionButton, INT], spawn = [position_button_event])]
-    // fn pos(c: pos::Context) {
-        // hprintln!("Hello!_test").unwrap();
-        // c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
-        // c.spawn.position_button_event().unwrap();
+
+
+
+    // #[task(priority = 2, resources = [LED])]
+    // fn led_button_event(cx: led_button_event::Context, ledon: bool){
+        ////let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
+        // led(cx.resources.LED, ledon);
     // }
+
+    //#[task(binds = EXTI4_15, priority = 1, resources = [DistanceButton, PositionButton, INT], spawn = [led_button_event])]
+    // fn EXTI4_15(c: EXTI4_15::Context) {
+        // 
+      //// let mut distancebutton: gpiob::PB5<Input<PullUp>> = c.resources.DistanceButton;
+        // let res = c.resources.DistanceButton.is_high();
+        // match res {
+            // core::result::Result::Ok(v) => {
+                // if v==true {
+                    // hprintln!("Hello!_testif").unwrap();
+                    // c.resources.INT.clear_irq(c.resources.DistanceButton.pin_number());
+                    // c.spawn.led_button_event(false).unwrap();
+                // } else {
+                    // hprintln!("Hello!_testelse").unwrap();
+                    // c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
+                    // c.spawn.led_button_event(true).unwrap();
+                // }
+            // },
+            // _ => {
 // 
+            // }
+        // }
+   // }
+
+    // #[task(binds = USART1, priority = 1, resources = [USART1, INT], spawn = [position_button_event])]
+    // fn usart(cx: usart::Context){
+        // cx.resources.INT.clear_irq(c.resources.USART1.ptr();
+        // cx.spawn.usart_event().unwrap();
+// 
+    // }
+    
+    // #[task(priority = 2, resources = [USART1])]
+    // fn usart_button_event(cx: usart_button_event::Context){
+        // 
+    // }
+
     // Interrupt handlers used to dispatch software tasks
     extern "C" {
         fn USART4_USART5();
@@ -256,23 +243,23 @@ const APP: () = {
     }
 };
 
-fn ledOn(led: &mut gpiob::PB2<Output<PushPull>>) {
-    led.set_high().ok();
-}
-
-fn ledOff(led: &mut gpiob::PB2<Output<PushPull>>) {
-    led.set_low().ok();
-}
-
-fn led(led: &mut gpiob::PB2<Output<PushPull>>, turnon: bool,) {
-   
-    if turnon==true {
-        led.set_high().ok();
-    } else {
-        led.set_low().ok();
-    }
-
-}
+// fn ledOn(led: &mut gpiob::PB2<Output<PushPull>>) {
+    // led.set_high().ok();
+// }
+// 
+// fn ledOff(led: &mut gpiob::PB2<Output<PushPull>>) {
+    // led.set_low().ok();
+// }
+// 
+// fn led(led: &mut gpiob::PB2<Output<PushPull>>, turnon: bool,) {
+//    
+    // if turnon==true {
+        // led.set_high().ok();
+    // } else {
+        // led.set_low().ok();
+    // }
+// 
+// }
 // Example application: increment counter:
 // fn application(
 // 
