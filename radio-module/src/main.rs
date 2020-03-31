@@ -48,6 +48,8 @@ const APP: () = {
         COUNTER_1: u32,
         #[init(0)]
         COUNTER_2: u32,
+        #[init(0)]
+        COUNTER: u32,
     }
     #[init]
     fn init(cx: init::Context) -> init::LateResources {
@@ -199,10 +201,11 @@ const APP: () = {
     //     }
     // }
 
-    #[task(priority = 2, resources = [LED])]
+    #[task(priority = 2, resources = [LED, COUNTER])]
     fn led_button_event(cx: led_button_event::Context, ledon: bool){
         //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
-        led(cx.resources.LED, ledon);
+        //led(cx.resources.LED, ledon);
+        ledBlink(cx.resources.LED, ledon, cx.resources.COUNTER);
     }
 
     // #[task(priority = 2, resources = [&LED])]
@@ -272,6 +275,15 @@ fn led(led: &mut gpiob::PB2<Output<PushPull>>, turnon: bool,) {
         led.set_low().ok();
     }
 
+}
+
+fn ledBlink(led: &mut gpiob::PB2<Output<PushPull>>, turnon: bool, counter: &mut u32){
+    *counter+=1;
+    if *counter == 1{
+        led.set_high().ok();
+        //cortex_m::asm::delay(30);
+        led.set_low().ok();
+    }
 }
 // Example application: increment counter:
 // fn application(
