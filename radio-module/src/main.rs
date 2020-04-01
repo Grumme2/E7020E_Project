@@ -141,6 +141,84 @@ const APP: () = {
     fn idle(cx: idle::Context) -> ! {
         let rx = cx.resources.RX;
         let tx = cx.resources.TX;
+        //sned sentence $PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28<CR><LR>
+        tx.write(36u8);
+        tx.write(80u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(77u8);
+        tx.write(84u8);
+        tx.write(75u8);
+        tx.write(51u8);
+        tx.write(49u8);
+        tx.write(52u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(49u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(49u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(42u8);
+        tx.write(0x28);
+        tx.write(13u8);
+        tx.write(10u8);
+
+        // send sentence $PMTK220,1000*1F<CR><LR>
+
+        tx.write(36u8); 
+        tx.write(80u8);
+        tx.write(77u8);
+        tx.write(84u8);
+        tx.write(75u8);
+        tx.write(50u8);
+        tx.write(50u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(49u8);
+        tx.write(48u8);
+        tx.write(48u8);
+        tx.write(48u8);
+        tx.write(42u8);
+        tx.write(0x1F);
+        tx.write(13u8);
+        tx.write(10u8);
+
+
+
         loop {
             //hprintln!("test");
             match block!(rx.read()) {
