@@ -66,9 +66,7 @@ const APP: () = {
         // Configure the clock.
         let mut rcc = cx.device.RCC.freeze(Config::hsi16());
         let mut syscfg = syscfg::SYSCFG::new(cx.device.SYSCFG, &mut rcc);
-        //let clocks = cx.device.RCC.Clocks;
-       // let clocks = rcc2.cfgr.freeze();
-       // let clocks = rcc.cfgr.freeze();
+        
         // Acquire the GPIOB peripheral. This also enables the clock for GPIOB in
         // the RCC register.
         let gpioa = cx.device.GPIOA.split(&mut rcc);
@@ -95,7 +93,7 @@ const APP: () = {
         let serial = Serial::usart1(
             cx.device.USART1,
             (tx, rx),
-        serialConfig::default(), //.baudrate(115_200.bps())     Is now 9600 (default, 8 bit data 1 stop)
+            serialConfig::default().baudrate(9_600.bps()), //    Is now 9600 (default, 8 bit data 1 stop)
             &mut rcc,   
         ).unwrap();
 
@@ -127,43 +125,6 @@ const APP: () = {
 
         let reset = gpioc.pc0.into_push_pull_output();
 
-        // fn init(_: init::Context) {
-        //     rtfm::pend(Interrupt::EXTI4_15);
-        //     rtfm::pend(Interrupt::EXTI2_3);
-        // }
-        //longfi_bindings::set_radio_reset(reset);
-
-        // let ant_sw = AntennaSwitches::new(
-            // gpioa.pa1.into_push_pull_output(),
-            // gpioc.pc2.into_push_pull_output(),
-            // gpioc.pc1.into_push_pull_output(),
-        // );
-
-        //longfi_bindings::set_antenna_switch(ant_sw);
-
-        // let en_tcxo = gpioa.pa8.into_push_pull_output();
-        // longfi_bindings::set_tcxo_pins(en_tcxo);
-
-        // static mut BINDINGS: longfi_device::BoardBindings = longfi_device::BoardBindings {
-            // reset: Some(longfi_bindings::radio_reset),
-            // spi_in_out: Some(longfi_bindings::spi_in_out),
-            // spi_nss: Some(longfi_bindings::spi_nss),
-            // delay_ms: Some(longfi_bindings::delay_ms),
-            // get_random_bits: Some(longfi_bindings::get_random_bits),
-            // set_antenna_pins: Some(longfi_bindings::set_antenna_pins),
-            // set_board_tcxo: Some(longfi_bindings::set_tcxo),
-        // }; 
-
-        // let rf_config = RfConfig {
-            // oui: 0xBEEF_FEED,
-            // device_id: 0xABCD,
-        // };
-
-        // let mut longfi_radio = unsafe { LongFi::new(&mut BINDINGS, rf_config).unwrap() };
-
-        // longfi_radio.set_buffer(resources.BUFFER);
-
-        // longfi_radio.receive();
 
         // Configure PB5 as output.
         let mut led = gpiob.pb2.into_push_pull_output();
@@ -325,12 +286,90 @@ const APP: () = {
     fn idle(cx: idle::Context) -> ! {
         let rx = cx.resources.RX;
         let tx = cx.resources.TX;
+        //sned sentence $PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28<CR><LR>
+        tx.write(36u8);
+        tx.write(80u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(77u8);
+        tx.write(84u8);
+        tx.write(75u8);
+        tx.write(51u8);
+        tx.write(49u8);
+        tx.write(52u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(49u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(49u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(48u8);
+        tx.write(42u8);
+        tx.write(0x28);
+        tx.write(13u8);
+        tx.write(10u8);
+
+        // send sentence $PMTK220,1000*1F<CR><LR>
+
+        tx.write(36u8); 
+        tx.write(80u8);
+        tx.write(77u8);
+        tx.write(84u8);
+        tx.write(75u8);
+        tx.write(50u8);
+        tx.write(50u8);
+        tx.write(48u8);
+        tx.write(44u8);
+        tx.write(49u8);
+        tx.write(48u8);
+        tx.write(48u8);
+        tx.write(48u8);
+        tx.write(42u8);
+        tx.write(0x1F);
+        tx.write(13u8);
+        tx.write(10u8);
+
+
+
         loop {
-            hprintln!("test");
+            //hprintln!("test");
             match block!(rx.read()) {
                 Ok(byte) => {
-                    hprintln!("Ok {:?}", byte);
-                    tx.write(byte).unwrap();
+                    hprintln!("{:?}", byte);
+                    //tx.write(byte).unwrap();
                 }
                 Err(err) => {
                     hprintln!("Error {:?}", err);
