@@ -5,6 +5,13 @@
 
 //mod longfi_bindings;
 
+extern crate fpa;
+extern crate libm;
+
+// 32-bit fixed point number, 16 bits for the integer part and 16 bits for
+// the fractional part
+use fpa::I18F14;
+
 extern crate panic_semihosting;
 
 use hal::{
@@ -29,6 +36,7 @@ use cortex_m_semihosting::{hprintln};
 use cortex_m::peripheral::DWT;
 use nb::block;
 use rtfm::Mutex;
+//use libm;
 // use rtfm::{Exclusive, Mutex, app};
 //use rtfm::cyccnt::{Instant, U32Ext as _};
 // use longfi_bindings::AntennaSwitches;
@@ -55,9 +63,15 @@ const APP: () = {
         STATE: bool,
         #[init(0)]
         COUNTER: u8,
+        #[init(1)]
+        COUNTER_TOGGLE: u8,
         TX: Tx<USART1>,
         RX: Rx<USART1>,
         TIMER_LED_INTERVAL: timer::Timer<pac::TIM2>,
+        CURRENT_LON: f32,
+        CURRENT_LAT: f32,
+        START_LON: f32,
+        START_LAT: f32,
      //   ITM: ITM,
         //USART1: *const usart1::RegisterBlock,
     }
@@ -83,8 +97,15 @@ const APP: () = {
         let mut distancebutton = gpiob.pb5.into_pull_up_input();
         let mut positionbutton = gpiob.pb6.into_pull_up_input();
 
-        let mut tim2 = timer::Timer::tim2(cx.device.TIM2, 1000.ms(), &mut rcc);
+        let mut tim2 = timer::Timer::tim2(cx.device.TIM2, 200.ms(), &mut rcc);
         let mut counter = 0;
+        let mut current_lat = 65.199_f32;
+        let mut current_lon = 2_f32;
+        let mut start_lat = 65.200_f32;
+        let mut start_lon = 2_f32;
+        current_lat = current_lat;
+        start_lat = start_lat;
+        //let mut counter_toggle = 0;
 
         let mut rx = gpioa.pa10.into_pull_up_input();
         let mut tx = gpioa.pa9.into_push_pull_output();
@@ -142,6 +163,10 @@ const APP: () = {
             TX: tx,
             RX: rx,
             TIMER_LED_INTERVAL: tim2,
+            START_LON: start_lon,
+            START_LAT: start_lat,
+            CURRENT_LON: current_lon,
+            CURRENT_LAT: current_lat,
             //COUNTER: counter,
         }
     }
@@ -198,32 +223,37 @@ const APP: () = {
     //     }
     // }
 
-    #[task(priority = 3, resources = [LED, COUNTER, TIMER_LED_INTERVAL])]
+    #[task(priority = 3, resources = [LED, COUNTER, TIMER_LED_INTERVAL, COUNTER_TOGGLE])]
     fn led_button_event(cx: led_button_event::Context) {
         //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
         //led(cx.resources.LED, ledon);
         let mut led = cx.resources.LED;
         let mut counter = cx.resources.COUNTER;
+        let mut counter_toggle = cx.resources.COUNTER_TOGGLE;
         let mut timer_led_interval = cx.resources.TIMER_LED_INTERVAL;
         ledOff(led);
         counterReset(counter);
+        counterToggle(counter_toggle);
         timer_led_interval.reset();
         timerListen(timer_led_interval);
         //ledBlink(cx.resources.LED, ledon, cx.resources.COUNTER);
     }
 
-    #[task(binds = TIM2, priority = 2, resources = [LED, COUNTER, TIMER_LED_INTERVAL])]
+    #[task(binds = TIM2, priority = 2, resources = [LED, COUNTER, TIMER_LED_INTERVAL, COUNTER_TOGGLE])]
     fn led_timer_event(cx: led_timer_event::Context) {
         let mut led = cx.resources.LED;
         let mut counter = cx.resources.COUNTER;
+        let mut counter_toggle = cx.resources.COUNTER_TOGGLE;
         let mut timer_led_interval = cx.resources.TIMER_LED_INTERVAL;
         let mut check = false;
         counter.lock(|counter| {
             counterPlusOne(counter);
-            if (counterCheck(counter, 6)) {
-                check = true;
-            }
-            //let counter = *cx.resources.COUNTER;
+            counter_toggle.lock(|counter_toggle| {
+                if (counterCheck(counter, counter_toggle)) {
+                    check = true;
+                }  
+            });
+                //let counter = *cx.resources.COUNTER;;
             
         });
         led.lock(|led| {
@@ -282,7 +312,7 @@ const APP: () = {
         }
     }
 
-     #[idle(resources = [RX, TX])]
+     #[idle(resources = [RX, TX, CURRENT_LAT, CURRENT_LON, START_LAT, START_LON])]
     fn idle(cx: idle::Context) -> ! {
         let rx = cx.resources.RX;
         let tx = cx.resources.TX;
@@ -362,19 +392,38 @@ const APP: () = {
         tx.write(13u8);
         tx.write(10u8);
 
-
-
+        
+        let mut counter: usize = 100;
+        let mut buf: [u8; 82] = [0; 82];
         loop {
             //hprintln!("test");
             match block!(rx.read()) {
                 Ok(byte) => {
-                    hprintln!("{:?}", byte);
+                    
+                    if counter < 82{
+                        buf[counter] = byte;
+                        counter += 1;
+                        if byte == 10 && buf[counter-1] == 13 {
+                            counter =  100;
+                        }
+                    }else if byte == 36 {
+                        counter =  0;
+                        buf[counter] = byte;
+                        counter +=1
+                    }else{
+                        //parsenmeabuf(buf);
+                        //printbuf(buf);
+                        counter = 0;
+                        hprintln!("{:?}",distance(cx.resources.CURRENT_LAT, cx.resources.CURRENT_LON, cx.resources.START_LAT, cx.resources.START_LON));
+                        //break!;
+                    }
+                    //hprintln!("{:?}", byte);
                     //tx.write(byte).unwrap();
                 }
                 Err(err) => {
                     hprintln!("Error {:?}", err);
                 }
-            }
+            }   
         }
     }
 
@@ -428,6 +477,13 @@ const APP: () = {
     }
 };
 
+fn printbuf(buf: [u8; 82]) {
+    for x in 0..81 {
+        hprintln!("{:?}", buf[x] as char);
+    }
+}
+
+
 fn ledOn(led: &mut gpiob::PB2<Output<PushPull>>) {
     led.set_high().ok();
 }
@@ -469,11 +525,22 @@ fn counterReset(counter: &mut u8) {
     *counter = 0;
 }
 
-fn counterCheck(counter: &mut u8, check: u8) -> bool {
-    if (*counter >= check) {
+fn counterCheck(counter: &mut u8, check: &mut u8) -> bool {
+    let mut temp = *check;
+    if (*counter >= (2*temp)) {
         return true;
     } else {
         return false;
+    }
+}
+
+fn counterToggle(counter: &mut u8) {
+    if (*counter == 1) {
+        *counter = 2;
+    } else if (*counter == 2) {
+        *counter = 3;
+    } else {
+        *counter = 1;
     }
 }
 
@@ -483,6 +550,141 @@ fn timerListen(timer: &mut timer::Timer<pac::TIM2>) {
 
 fn timerUnlisten(timer: &mut timer::Timer<pac::TIM2>) {
     timer.unlisten();
+}
+
+fn distance(lat1_p: &mut f32,lon1_p: &mut f32,lat2_p: &mut f32,lon2_p: &mut f32) -> f32 {
+    let lat1 = *lat1_p;
+    let lon1 = *lon1_p;
+    let lat2 = *lat2_p;
+    let lon2 = *lon2_p;
+    let R = 6371_f32; // Radius of the earth in km
+    let dLat = deg2rad(lat2-lat1);  // deg2rad below
+    let dLon = deg2rad(lon2-lon1); 
+    let a = 
+        sinDeg(rad2deg(dLat)/2_f32) * sinDeg(rad2deg(dLat)/2_f32) +
+        cos(deg2rad(lat1)) * cos(deg2rad(lat2)) * 
+        sinDeg(rad2deg(dLon)/2_f32) * sinDeg(rad2deg(dLon)/2_f32);
+    hprintln!("_____a {:?}", a);
+    let c = 2_f32 * atan2(sqrt(a), sqrt(1_f32 - a)); 
+    hprintln!("__c {:?}", c);
+    hprintln!("_dlat {:?}", dLat);
+    hprintln!("sin {:?}", sinDeg(0_f32));
+    hprintln!("cos {:?}", pi2());
+    let d = R * c; // Distance in km
+    return d;
+  }
+  
+fn rad2deg(rad: f32) -> f32{
+    return (rad* 180_f32)/pi();
+}
+fn deg2rad(deg: f32) -> f32 {
+    let t2 = 180_f32;
+    return deg * (pi()/t2);
+}
+
+fn sinDeg(x: f32) -> f32 {
+    let t1 = 40500_f32;
+    let t2 = 180_f32;
+    let t3 = 4_f32;
+    return (t3*x*(t2-x))/(t1-x*(t2-x));
+}
+
+fn cos(y: f32) -> f32 {
+    let t2 = 4_f32;
+    return ((pi()*pi() - t2*(y*y))/(pi()*pi() + (y*y)));
+}
+
+fn atan2(y: f32, x: f32) -> f32 {
+    if (x > 0_f32) {
+        return atan(y/x);
+    } else if (y > 0_f32) {
+        return pi()/2_f32 - atan(x/y);
+    } else if (y < 0_f32) {
+        (-1_f32*pi())/2_f32 - atan(x/y);
+    } else if (x < 0_f32) {
+        atan(x/y) + pi();
+    }
+    return 0_f32;
+}
+
+fn atan(x: f32) -> f32 {
+    let mut c = 0.28125_f32;
+    return x/(1_f32+c*x*x);
+}
+
+fn sqrt(x: f32) -> f32 {
+    return libm::powf(x, 0.5_f32);
+}
+
+fn pi() -> f32 {
+    return 3.14_f32;
+    //return I18F14(314_f32).unwrap() / I18F14(100_f32).unwrap();
+}
+
+fn pi2() -> f32 {
+    //return I18F14(314i16).unwrap() / I18F14(100i16).unwrap();
+    return 3.14_f32 * 3.14_f32;
+}
+
+
+fn parsenmeabuf(buf: [u8; 82]) {
+    //parse GPGGA
+    if buf[3]==71 && buf[4] == 71 && buf[5] == 65{
+        let mut commacount: u16 = 0;
+        let mut lastsigcommaindex: usize = 0;
+        let mut dotindex = 100;
+        let mut lat: u16 = 0;
+        let mut nmin: u16 = 0;
+        let mut nsec: u16 = 0;
+        let mut lon: u16 = 0;
+        let mut emin: u16 = 0;
+        let mut esec: u16 = 0;
+        for x in 5..81{
+            if buf[x] == 44{
+                commacount +=1;
+                lastsigcommaindex = x;
+                continue;
+            }
+            if commacount == 2{
+                if buf[x] == 46{
+                    dotindex == x;
+                    continue;
+                }
+                let mut digit: u16 = (buf[x]+2).into();
+                digit = digit % 10;
+                if dotindex < x { 
+                    nsec = nsec * 10 +digit 
+                } else if(buf[x+2] == 46 || nmin != 0) {
+                    nmin = nmin*10 + digit;
+                } else {
+                    lat = lat*10 + digit;
+                }    
+            }
+            if commacount == 4{
+                if buf[x] == 46{
+                    dotindex == x;
+                    continue;
+                }
+                let mut digit: u16 = (buf[x]+2).into();
+                digit = digit % 10;
+                if dotindex < x { 
+                    esec = esec * 10 +digit 
+                } else if(buf[x+2] == 46 || nmin != 0) {
+                    emin = emin*10 + digit;
+                } else {
+                    lon = lon*10 + digit;
+                }    
+            }
+            if commacount == 6{
+                if buf[x] == 0{
+                    hprintln!("dataisfucked");
+                }
+            }
+        }
+        let lat_f = I18F14(lat) + I18F14(nmin)/ I18F14(60u16) + I18F14(nsec)/I18F14(3600u16); 
+        let lon_f = I18F14(lon) + I18F14(emin)/ I18F14(60u16) + I18F14(esec)/I18F14(3600u16);
+        //getDistanceFromLatLonInKm();
+    }
 }
 // fn ledOn(led: &mut gpiob::PB2<Output<PushPull>>) {
     // led.set_high().ok();

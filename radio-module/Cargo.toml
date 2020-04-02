@@ -17,6 +17,8 @@ cobs = { version = "0.1.4", default-features = false }
 crc16 = "0.4.0"
 heapless = "0.5.1"
 postcard = "0.4.2"
+fpa = "0.1.0"
+libm = "0.2.1"
 #longfi-device = { git = "https://git.grepit.se/grepit/lora-rs.git" }
 #communicator = { git = "https://git.grepit.se/grepit/communicator.git" }
 #clang-sys = "0.29.1"
