@@ -22,12 +22,12 @@ https://docs.google.com/document/d/1sqJ3TY8bH1azIesI4otk2LLjVwCMFet3OU3TrjOT8jw/
 
 In order to have the project working as intended you need to have the following things installed: 
 
-*rustup 
-*llvm-8.0
-*llvm-config
-*openocd
-*gcc
-*arm-none-eabi-gcc
+* rustup 
+* llvm-8.0
+* llvm-config
+* openocd
+* gcc
+* arm-none-eabi-gcc
 
 ### Building/running the project
 
