@@ -44,9 +44,9 @@ Then you need to install the following dependencies using rustup:
 
 `rustup target add thumbv6m-none-eabi`
 
-In order to start the project you first have to redirect to the **radio-module** folder.
+In order to start the project you first have to redirect to the **project_code** folder.
 
- `cd radio-module`
+ `cd project_code`
 
  From that you need to make sure that you have a file called **stm32l0_dual_bank.cfg** in the **target** folder. If not, create a new file with that name that contains everything from https://github.com/ntfreak/openocd/blob/master/tcl/target/stm32l0_dual_bank.cfg
 
@@ -54,7 +54,7 @@ After this you may finally start **openocd**:
 
 `openocd -f openocd.cfg`
 
-Then open a new terminal window and redirect to the **radio-module** directory, and from that you may run the program: 
+Then open a new terminal window and redirect to the **project_code** directory, and from that you may run the program: 
 
 `cargo run`
 
