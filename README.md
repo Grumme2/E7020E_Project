@@ -48,11 +48,7 @@ In order to start the project you first have to redirect to the **radio-module**
 
  `cd radio-module`
 
- From that you need to make sure that you have a file called **stm32l0_dual_bank.cfg** in the **target** folder. If not, create a new file with that name that contains the following: 
-
- `source [find target/stm32l0.cfg]
-set _FLASHNAME $_CHIPNAME.flash1
-flash bank $_FLASHNAME stm32lx 0 0 0 0 $_TARGETNAME`
+ From that you need to make sure that you have a file called **stm32l0_dual_bank.cfg** in the **target** folder. If not, create a new file with that name that contains everything from https://github.com/ntfreak/openocd/blob/master/tcl/target/stm32l0_dual_bank.cfg
 
 After this you may finally start **openocd**:
 
@@ -63,3 +59,8 @@ Then open a new terminal window and redirect to the **radio-module** directory, 
 `cargo run`
 
 Now you should have a fully functional GPS-tracker on your hands!
+
+## Team
+* Anton Grahn - antgra-6@student.ltu.se
+* Tom Hammarkvist - tomham-3@student.ltu.se
+* Rickard Holmberg - richol-6@student.ltu.se
