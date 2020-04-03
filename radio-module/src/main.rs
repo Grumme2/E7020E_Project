@@ -5,12 +5,10 @@
 
 //mod longfi_bindings;
 
-extern crate fpa;
 extern crate libm;
 
 // 32-bit fixed point number, 16 bits for the integer part and 16 bits for
 // the fractional part
-use fpa::I18F14;
 
 extern crate panic_semihosting;
 
@@ -63,9 +61,9 @@ const APP: () = {
         #[init(false)]
         STATE: bool,
         #[init(0)]
-        COUNTER: u8,
+        COUNTER: u16,
         #[init(1)]
-        COUNTER_TOGGLE: u8,
+        COUNTER_TOGGLE: u16,
         TX: Tx<USART1>,
         RX: Rx<USART1>,
         TIMER_LED_INTERVAL: timer::Timer<pac::TIM2>,
@@ -102,7 +100,7 @@ const APP: () = {
         let mut distancebutton = gpiob.pb5.into_pull_up_input();
         let mut positionbutton = gpiob.pb6.into_pull_up_input();
         let mut temp = gpioa.pa5.into_analog();
-        let mut tim2 = timer::Timer::tim2(cx.device.TIM2, 200.ms(), &mut rcc);
+        let mut tim2 = timer::Timer::tim2(cx.device.TIM2, 1000.ms(), &mut rcc);
         let mut counter = 0;
         let mut current_lat = 65.199_f32;
         let mut current_lon = 2_f32;
@@ -240,13 +238,13 @@ const APP: () = {
         let mut counter_toggle = cx.resources.COUNTER_TOGGLE;
         let mut timer_led_interval = cx.resources.TIMER_LED_INTERVAL;
         let mut blink_on = cx.resources.BLINK_ON;
+        blink_onTrue(blink_on);
         ledOff(led);
         counterReset(counter);
         counterToggle(counter_toggle);
-        hprintln!("counter {:?}", *counter_toggle);
+        //hprintln!("counter {:?}", *counter_toggle);
         timer_led_interval.reset();
         timerListen(timer_led_interval);
-        blink_onTrue(blink_on);
         //ledBlink(cx.resources.LED, ledon, cx.resources.COUNTER);
     }
 
@@ -261,7 +259,7 @@ const APP: () = {
         counter.lock(|counter| {
             counterPlusOne(counter);
             counter_toggle.lock(|counter_toggle| {
-                if (counterCheck(counter, counter_toggle)) {
+                if counterCheck(counter, counter_toggle) {
                     check = true;
                 }  
             });
@@ -275,20 +273,60 @@ const APP: () = {
         timer_led_interval.lock(|timer_led_interval| {
             timer_led_interval.clear_irq();
             timer_led_interval.reset();
-            if (check) {
-                timerUnlisten(timer_led_interval);
+            if check {
                 blink_on.lock(|blink_on| {
                     blink_onFalse(blink_on);
                 });
+                timerUnlisten(timer_led_interval);
             }
         });
 
     }
 
-    #[task(priority = 1, resources = [CURRENT_LAT, CURRENT_LON, START_LAT, START_LON])]
-    fn setpos_event(cx: setpos_event::Context) {
-        *cx.resources.START_LAT = *cx.resources.CURRENT_LAT;
-        *cx.resources.START_LON = *cx.resources.CURRENT_LON;
+    #[task(priority = 1, resources = [CURRENT_LAT, CURRENT_LON, START_LAT, START_LON, LED, COUNTER_TOGGLE, BLINK_ON])]
+    fn setpos_event(cx: setpos_event::Context, tu: (f32, f32, bool)) {
+        let mut c_lon = cx.resources.CURRENT_LON;
+        let mut c_lat = cx.resources.CURRENT_LAT;
+        let mut s_lon = cx.resources.START_LON;
+        let mut s_lat = cx.resources.START_LAT;
+        let mut g_cu = cx.resources.COUNTER_TOGGLE;
+        let mut led = cx.resources.LED;
+        let mut blink_on = cx.resources.BLINK_ON;
+        c_lon.lock(|c_lon| {
+            c_lat.lock(|c_lat| {
+                s_lon.lock(|s_lon| {
+                    s_lat.lock(|s_lat| {
+                        if tu.2 {
+                            *c_lat = tu.0;
+                            *c_lon = tu.1;
+                        }
+                        //hprintln!("C_lat {:?}, C_lon {:?} S_lat {:?} S_lon {:?}",c_lat, c_lon, s_lat, s_lon);
+                        let distance = distance(c_lat, c_lon, s_lat, s_lon);
+                        //hprintln!("distance {:?}",distance);
+                        g_cu.lock(|g_cu| {
+                            let temp_c = *g_cu as f32;
+                            if distance*100_f32 > temp_c {
+                                blink_on.lock(|blink_on| {
+                                    if blink_onCheck(blink_on) == false {
+                                        led.lock(|led| {
+                                            ledOn(led);
+                                        });
+                                    }
+                                });
+                            } else {
+                                blink_on.lock(|blink_on| {
+                                    if blink_onCheck(blink_on) == false {
+                                        led.lock(|led| {
+                                            ledOff(led);
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    });
+                });
+            });
+        });
     }
     // #[task(priority = 2, resources = [&LED])]
     // fn position_button_event(cx: position_button_event::Context){
@@ -305,7 +343,7 @@ const APP: () = {
         // resources.INT.clear_irq(resources.SX1276_DIO0.pin_number());
         // spawn.radio_event(RfEvent::DIO0).unwrap();
         // }
-    #[task(binds = EXTI4_15, priority = 2, resources = [DistanceButton, PositionButton, INT], spawn = [led_button_event, setpos_event])]
+    #[task(binds = EXTI4_15, priority = 2, resources = [DistanceButton, PositionButton, INT, CURRENT_LAT, CURRENT_LON, START_LAT, START_LON], spawn = [led_button_event])]
     fn EXTI4_15(c: EXTI4_15::Context) {
         
        // let mut distancebutton: gpiob::PB5<Input<PullUp>> = c.resources.DistanceButton;
@@ -313,7 +351,7 @@ const APP: () = {
         match res {
             core::result::Result::Ok(v) => {
                 if v==true {
-                    hprintln!("Hello!_testif").unwrap();
+                    //hprintln!("Hello!_testif").unwrap();
                     c.resources.INT.clear_irq(c.resources.DistanceButton.pin_number());
                     c.spawn.led_button_event().unwrap();
                 }
@@ -323,27 +361,38 @@ const APP: () = {
         let res = c.resources.PositionButton.is_high();
         match res {
             core::result::Result::Ok(v) => {
+                // if v==true {
+                //     //hprintln!("Hello!_testelse").unwrap();
+                //     c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
+                //     *c.resources.START_LAT = *c.resources.CURRENT_LAT;
+                //     *c.resources.START_LON = *c.resources.CURRENT_LON;
+                // }
                 if v==true {
-                    hprintln!("Hello!_testelse").unwrap();
+                    //hprintln!("Hello!_testelse").unwrap();
                     c.resources.INT.clear_irq(c.resources.PositionButton.pin_number());
-                    c.spawn.setpos_event().unwrap();
+                    if *c.resources.START_LAT == 65.2_f32 {
+                        *c.resources.START_LAT = 65.199_f32;
+                    } else {
+                        *c.resources.START_LAT = 65.2_f32;
+                    }
+                    
                 }
             }
             _ => {}
         }
     }
 
-     #[idle(resources = [RX, TX, CURRENT_LAT, CURRENT_LON, START_LAT, START_LON, LED, COUNTER_TOGGLE, TEMP, ADC, BLINK_ON])]
+     #[idle(resources = [RX, TX, TEMP, ADC, BLINK_ON], spawn = [setpos_event]) ]
     fn idle(cx: idle::Context) -> ! {
         let rx = cx.resources.RX;
         let tx = cx.resources.TX;
-        let mut c_lon = cx.resources.CURRENT_LAT;
-        let mut c_lat = cx.resources.CURRENT_LON;
-        let mut s_lon = cx.resources.START_LON;
-        let mut s_lat = cx.resources.START_LAT;
-        let mut g_cu = cx.resources.COUNTER_TOGGLE;
-        let mut led = cx.resources.LED;
-        let mut blink_on = cx.resources.BLINK_ON;
+        // let mut c_lon = cx.resources.CURRENT_LAT;
+        // let mut c_lat = cx.resources.CURRENT_LON;
+        // let mut s_lon = cx.resources.START_LON;
+        // let mut s_lat = cx.resources.START_LAT;
+        // let mut g_cu = cx.resources.COUNTER_TOGGLE;
+        // let mut led = cx.resources.LED;
+        // let mut blink_on = cx.resources.BLINK_ON;
         let mut adc = cx.resources.ADC;
         let mut temp = cx.resources.TEMP;
 
@@ -355,51 +404,17 @@ const APP: () = {
             //hprintln!("test");
             match block!(rx.read()) {
                 Ok(byte) => {
-                    
                     if counter < 82usize{            //Build array
                        // hprintln!("check if counter");
                         buf[counter] = byte;
                         counter += 1;
                         if byte == 10 && buf[counter-2] == 13 {//checks for end of message characters <CR><LR>
                             let mut val: u16 = adc.read(temp).unwrap();
-                            hprintln!("temp {:?}", val);
-                            hprintln!("end of message c {:?}", counter);
+                            //hprintln!("temp {:?}", val);
+                            //hprintln!("end of message c {:?}", counter);
                             counter =  100;
                             let tu = parsenmeabuf(buf); 
-                            c_lon.lock(|c_lon| {
-                                c_lat.lock(|c_lat| {
-                                    s_lon.lock(|s_lon| {
-                                        s_lat.lock(|s_lat| {
-                                            if tu.2 {
-                                                *c_lat = tu.0;
-                                                *c_lon = tu.1;
-                                            }
-                                            hprintln!("C_lat {:?}, C_lon {:?} S_lat {:?} S_lon {:?}",c_lat, c_lon, s_lat, s_lon);
-                                            let distance = distance(c_lat, c_lon, s_lat, s_lon);
-                                            g_cu.lock(|g_cu| {
-                                                let temp_c = *g_cu as f32;
-                                                if ((distance*10_f32) > temp_c) {
-                                                    blink_on.lock(|blink_on| {
-                                                        if blink_onCheck(blink_on) == false {
-                                                            led.lock(|led| {
-                                                                //ledOn(led);
-                                                            });
-                                                        }
-                                                    });
-                                                } else {
-                                                    blink_on.lock(|blink_on| {
-                                                        if blink_onCheck(blink_on) == false {
-                                                            led.lock(|led| {
-                                                                //ledOff(led);
-                                                            });
-                                                        }
-                                                    });
-                                                }
-                                            });
-                                        });
-                                    });
-                                });
-                            });
+                            cx.spawn.setpos_event(tu).unwrap();
                         }
                     } else if byte == 36 {      //checks for start character $
                         counter =  0;
@@ -466,6 +481,7 @@ const APP: () = {
     extern "C" {
         fn USART4_USART5();
         fn LPTIM1();
+        fn I2C2();
     }
 };
 
@@ -515,26 +531,26 @@ fn blink_onFalse(blink_on: &mut bool) { *blink_on = false; }
 
 fn blink_onCheck(blink_on: &mut bool) -> bool { return *blink_on; }
 
-fn counterPlusOne(counter: &mut u8) { *counter += 1; }
+fn counterPlusOne(counter: &mut u16) { *counter += 1u16; }
 
-fn counterReset(counter: &mut u8) { *counter = 0; }
+fn counterReset(counter: &mut u16) { *counter = 0; }
 
-fn counterCheck(counter: &mut u8, check: &mut u8) -> bool {
+fn counterCheck(counter: &mut u16, check: &mut u16) -> bool {
     let mut temp = *check;
-    if (*counter >= (2*temp)) {
+    if *counter >= (2u16*temp) {
         return true;
     } else {
         return false;
     }
 }
 
-fn counterToggle(counter: &mut u8) {
-    if (*counter == 1) {
-        *counter = 2;
-    } else if (*counter == 2) {
-        *counter = 3;
+fn counterToggle(counter: &mut u16) {
+    if *counter == 1 {
+        *counter = 2u16;
+    } else if *counter == 2 {
+        *counter = 3u16;
     } else {
-        *counter = 1;
+        *counter = 1u16;
     }
 }
 
@@ -584,13 +600,13 @@ fn cos(y: f32) -> f32 {
 }
 
 fn atan2(y: f32, x: f32) -> f32 {
-    if (x > 0_f32) {
+    if x > 0_f32 {
         return atan(y/x);
-    } else if (y > 0_f32) {
+    } else if y > 0_f32 {
         return pi()/2_f32 - atan(x/y);
-    } else if (y < 0_f32) {
+    } else if y < 0_f32 {
         (-1_f32*pi())/2_f32 - atan(x/y);
-    } else if (x < 0_f32) {
+    } else if x < 0_f32 {
         atan(x/y) + pi();
     }
     return 0_f32;
@@ -608,11 +624,6 @@ fn sqrt(x: f32) -> f32 {
 fn pi() -> f32 {
     return 3.14_f32;
     //return I18F14(314_f32).unwrap() / I18F14(100_f32).unwrap();
-}
-
-fn pi2() -> f32 {
-    //return I18F14(314i16).unwrap() / I18F14(100i16).unwrap();
-    return 3.14_f32 * 3.14_f32;
 }
 
 
@@ -644,7 +655,7 @@ fn parsenmeabuf(buf: [u8; 82]) -> (f32, f32, bool) {
                 digit = digit % 10_f32;
                 if dotindex < x { 
                     nsec = nsec * 10_f32 +digit 
-                } else if(buf[x+2] == 46 || nmin != 0_f32) {
+                } else if buf[x+2] == 46 || nmin != 0_f32 {
                     nmin = nmin*10_f32 + digit;
                 } else {
                     lat = lat*10_f32 + digit;
@@ -659,7 +670,7 @@ fn parsenmeabuf(buf: [u8; 82]) -> (f32, f32, bool) {
                 digit = digit % 10_f32;
                 if dotindex < x { 
                     esec = esec * 10_f32 +digit 
-                } else if(buf[x+2] == 46 || nmin != 0_f32) {
+                } else if buf[x+2] == 46 || nmin != 0_f32 {
                     emin = emin*10_f32 + digit;
                 } else {
                     lon = lon*10_f32 + digit;
@@ -668,9 +679,9 @@ fn parsenmeabuf(buf: [u8; 82]) -> (f32, f32, bool) {
             else if commacount == 6_f32{
                 if buf[x] != 48{ // checks if buf[x]=0
                     datagood = true;
-                    hprintln!("datanotfucked {:?}", buf[x]);
+                    //hprintln!("datanotfucked {:?}", buf[x]);
                 } else {
-                    hprintln!("unfuckeddataisfucked");
+                    //hprintln!("unfuckeddataisfucked");
                 }
             }
         }
