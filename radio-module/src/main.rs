@@ -15,6 +15,7 @@ use fpa::I18F14;
 extern crate panic_semihosting;
 
 use hal::{
+    adc::Adc,
     exti::TriggerEdge,
     exti::Interrupt,
     gpio::*,
@@ -72,6 +73,10 @@ const APP: () = {
         CURRENT_LAT: f32,
         START_LON: f32,
         START_LAT: f32,
+        ADC: Adc,
+        TEMP: gpioa::PA5<Analog>,
+        #[init(false)]
+        BLINK_ON: bool,
      //   ITM: ITM,
         //USART1: *const usart1::RegisterBlock,
     }
@@ -96,7 +101,7 @@ const APP: () = {
        // let sx1276_dio0 = gpiob.pb4.into_pull_up_input();
         let mut distancebutton = gpiob.pb5.into_pull_up_input();
         let mut positionbutton = gpiob.pb6.into_pull_up_input();
-
+        let mut temp = gpioa.pa5.into_analog();
         let mut tim2 = timer::Timer::tim2(cx.device.TIM2, 200.ms(), &mut rcc);
         let mut counter = 0;
         let mut current_lat = 65.199_f32;
@@ -146,6 +151,7 @@ const APP: () = {
 
         let reset = gpioc.pc0.into_push_pull_output();
 
+        let adc = cx.device.ADC.constrain(&mut rcc);
 
         // Configure PB5 as output.
         let mut led = gpiob.pb2.into_push_pull_output();
@@ -167,6 +173,8 @@ const APP: () = {
             START_LAT: start_lat,
             CURRENT_LON: current_lon,
             CURRENT_LAT: current_lat,
+            TEMP: temp,
+            ADC: adc,
             //COUNTER: counter,
         }
     }
@@ -223,7 +231,7 @@ const APP: () = {
     //     }
     // }
 
-    #[task(priority = 4, resources = [LED, COUNTER, TIMER_LED_INTERVAL, COUNTER_TOGGLE])]
+    #[task(priority = 4, resources = [LED, COUNTER, TIMER_LED_INTERVAL, COUNTER_TOGGLE, BLINK_ON])]
     fn led_button_event(cx: led_button_event::Context) {
         //let temp: stm32l0xx_hal::gpio::gpiob::PB2<stm32l0xx_hal::gpio::Output<stm32l0xx_hal::gpio::PushPull>> = *cx.resources.LED;
         //led(cx.resources.LED, ledon);
@@ -231,20 +239,24 @@ const APP: () = {
         let mut counter = cx.resources.COUNTER;
         let mut counter_toggle = cx.resources.COUNTER_TOGGLE;
         let mut timer_led_interval = cx.resources.TIMER_LED_INTERVAL;
+        let mut blink_on = cx.resources.BLINK_ON;
         ledOff(led);
         counterReset(counter);
         counterToggle(counter_toggle);
+        hprintln!("counter {:?}", *counter_toggle);
         timer_led_interval.reset();
         timerListen(timer_led_interval);
+        blink_onTrue(blink_on);
         //ledBlink(cx.resources.LED, ledon, cx.resources.COUNTER);
     }
 
-    #[task(binds = TIM2, priority = 3, resources = [LED, COUNTER, TIMER_LED_INTERVAL, COUNTER_TOGGLE])]
+    #[task(binds = TIM2, priority = 3, resources = [LED, COUNTER, TIMER_LED_INTERVAL, COUNTER_TOGGLE, BLINK_ON])]
     fn led_timer_event(cx: led_timer_event::Context) {
         let mut led = cx.resources.LED;
         let mut counter = cx.resources.COUNTER;
         let mut counter_toggle = cx.resources.COUNTER_TOGGLE;
         let mut timer_led_interval = cx.resources.TIMER_LED_INTERVAL;
+        let mut blink_on = cx.resources.BLINK_ON;
         let mut check = false;
         counter.lock(|counter| {
             counterPlusOne(counter);
@@ -265,6 +277,9 @@ const APP: () = {
             timer_led_interval.reset();
             if (check) {
                 timerUnlisten(timer_led_interval);
+                blink_on.lock(|blink_on| {
+                    blink_onFalse(blink_on);
+                });
             }
         });
 
@@ -318,7 +333,7 @@ const APP: () = {
         }
     }
 
-     #[idle(resources = [RX, TX, CURRENT_LAT, CURRENT_LON, START_LAT, START_LON, LED, COUNTER_TOGGLE])]
+     #[idle(resources = [RX, TX, CURRENT_LAT, CURRENT_LON, START_LAT, START_LON, LED, COUNTER_TOGGLE, TEMP, ADC, BLINK_ON])]
     fn idle(cx: idle::Context) -> ! {
         let rx = cx.resources.RX;
         let tx = cx.resources.TX;
@@ -328,82 +343,11 @@ const APP: () = {
         let mut s_lat = cx.resources.START_LAT;
         let mut g_cu = cx.resources.COUNTER_TOGGLE;
         let mut led = cx.resources.LED;
-        //sned sentence $PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28<CR><LR>
-        tx.write(36u8);
-        tx.write(80u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(77u8);
-        tx.write(84u8);
-        tx.write(75u8);
-        tx.write(51u8);
-        tx.write(49u8);
-        tx.write(52u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(49u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(49u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(48u8);
-        tx.write(42u8);
-        tx.write(0x28);
-        tx.write(13u8);
-        tx.write(10u8);
+        let mut blink_on = cx.resources.BLINK_ON;
+        let mut adc = cx.resources.ADC;
+        let mut temp = cx.resources.TEMP;
 
-        // send sentence $PMTK220,1000*1F<CR><LR>
-
-        tx.write(36u8); 
-        tx.write(80u8);
-        tx.write(77u8);
-        tx.write(84u8);
-        tx.write(75u8);
-        tx.write(50u8);
-        tx.write(50u8);
-        tx.write(48u8);
-        tx.write(44u8);
-        tx.write(49u8);
-        tx.write(48u8);
-        tx.write(48u8);
-        tx.write(48u8);
-        tx.write(42u8);
-        tx.write(0x1F);
-        tx.write(13u8);
-        tx.write(10u8);
-
+        gpsInit(tx);
         
         let mut counter: usize = 100;
         let mut buf: [u8; 82] = [0; 82];
@@ -417,6 +361,8 @@ const APP: () = {
                         buf[counter] = byte;
                         counter += 1;
                         if byte == 10 && buf[counter-2] == 13 {//checks for end of message characters <CR><LR>
+                            let mut val: u16 = adc.read(temp).unwrap();
+                            hprintln!("temp {:?}", val);
                             hprintln!("end of message c {:?}", counter);
                             counter =  100;
                             let tu = parsenmeabuf(buf); 
@@ -433,8 +379,20 @@ const APP: () = {
                                             g_cu.lock(|g_cu| {
                                                 let temp_c = *g_cu as f32;
                                                 if ((distance*10_f32) > temp_c) {
-                                                    led.lock(|led| {
-                                                        ledOn(led);
+                                                    blink_on.lock(|blink_on| {
+                                                        if blink_onCheck(blink_on) == false {
+                                                            led.lock(|led| {
+                                                                //ledOn(led);
+                                                            });
+                                                        }
+                                                    });
+                                                } else {
+                                                    blink_on.lock(|blink_on| {
+                                                        if blink_onCheck(blink_on) == false {
+                                                            led.lock(|led| {
+                                                                //ledOff(led);
+                                                            });
+                                                        }
                                                     });
                                                 }
                                             });
@@ -551,13 +509,15 @@ fn ledBlink(led: &mut gpiob::PB2<Output<PushPull>>){
     }
 }
 
-fn counterPlusOne(counter: &mut u8) {
-    *counter += 1;
-}
+fn blink_onTrue(blink_on: &mut bool) { *blink_on = true; }
 
-fn counterReset(counter: &mut u8) {
-    *counter = 0;
-}
+fn blink_onFalse(blink_on: &mut bool) { *blink_on = false; }
+
+fn blink_onCheck(blink_on: &mut bool) -> bool { return *blink_on; }
+
+fn counterPlusOne(counter: &mut u8) { *counter += 1; }
+
+fn counterReset(counter: &mut u8) { *counter = 0; }
 
 fn counterCheck(counter: &mut u8, check: &mut u8) -> bool {
     let mut temp = *check;
@@ -719,6 +679,84 @@ fn parsenmeabuf(buf: [u8; 82]) -> (f32, f32, bool) {
         //getDistanceFromLatLonInKm();
     }
     return(lat, lon, datagood);
+}
+
+fn gpsInit(tx: &mut Tx<USART1>) {
+    //sned sentence $PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28<CR><LR>
+    tx.write(36u8);
+    tx.write(80u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(77u8);
+    tx.write(84u8);
+    tx.write(75u8);
+    tx.write(51u8);
+    tx.write(49u8);
+    tx.write(52u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(49u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(49u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(48u8);
+    tx.write(42u8);
+    tx.write(0x28);
+    tx.write(13u8);
+    tx.write(10u8);
+
+    // send sentence $PMTK220,1000*1F<CR><LR>
+
+    tx.write(36u8); 
+    tx.write(80u8);
+    tx.write(77u8);
+    tx.write(84u8);
+    tx.write(75u8);
+    tx.write(50u8);
+    tx.write(50u8);
+    tx.write(48u8);
+    tx.write(44u8);
+    tx.write(49u8);
+    tx.write(48u8);
+    tx.write(48u8);
+    tx.write(48u8);
+    tx.write(42u8);
+    tx.write(0x1F);
+    tx.write(13u8);
+    tx.write(10u8);
 }
 // fn ledOn(led: &mut gpiob::PB2<Output<PushPull>>) {
     // led.set_high().ok();
